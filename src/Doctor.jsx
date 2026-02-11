@@ -13,19 +13,20 @@ export default function Doctor({ logout }) {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [dark, setDark] = useState(true);
 
   const login = async () => {
-    const res = await fetch(`${API}/api/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-    if (!res.ok) return alert(data.message);
-    setWard(data.ward);
-    setDoctor(data.doctor);
-    setLogged(true);
+    try {
+      const res = await fetch(`${API}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.message);
+      setWard(data.ward);
+      setDoctor(data.doctor);
+      setLogged(true);
+    } catch (e) { alert("Backend is waking up... please try again in a few seconds."); }
   };
 
   const load = async () => {
@@ -33,27 +34,22 @@ export default function Doctor({ logout }) {
     try {
       const res = await fetch(`${API}/api/queue/${ward}`);
       const data = await res.json();
-      
       setQueue(data.queue || []);
       setNowServing(data.nowServing || null);
 
       const currentCheckedIn = (data.queue || []).filter(p => p.checkedIn).length;
       if (currentCheckedIn > prevCheckedInCount) {
-        ding.play().catch(() => console.log("Audio blocked"));
+        ding.play().catch(() => console.log("Audio waiting for user interaction"));
       }
       setPrevCheckedInCount(currentCheckedIn);
-    } catch (err) {
-      console.error("Fetch error:", err);
-    }
+    } catch (err) { console.error("Fetch error:", err); }
   };
 
   const callNext = async () => {
     try {
-      const res = await fetch(`${API}/api/call-next/${ward}`, { method: "POST" });
-      await load(); 
-    } catch (e) {
-      console.error("Connection error");
-    }
+      await fetch(`${API}/api/call-next/${ward}`, { method: "POST" });
+      load(); 
+    } catch (e) { console.error("Connection error"); }
   };
 
   useEffect(() => {
@@ -70,7 +66,7 @@ export default function Doctor({ logout }) {
 
   if (!logged) {
     return (
-      <div style={dark ? styles.loginPageDark : styles.loginPageLight}>
+      <div style={styles.loginPageDark}>
         <div style={styles.loginCardDark}>
           <h2 style={{marginBottom: '20px'}}>Doctor Portal</h2>
           <input style={styles.inputDark} placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
@@ -97,14 +93,8 @@ export default function Doctor({ logout }) {
           <p style={styles.cardLabel}>CURRENT STATUS</p>
           <div style={styles.tokenDisplay}>{nowServing ? nowServing.token : "---"}</div>
           <p style={styles.patientMeta}>{nowServing ? nowServing.name : "Waiting for Patients"}</p>
-          
           <button 
-            style={{
-              ...styles.nextBtn, 
-              background: (!hasQueue && isServingSomeone) ? "#f59e0b" : "#10b981",
-              opacity: (hasQueue || isServingSomeone) ? 1 : 0.5,
-              cursor: (hasQueue || isServingSomeone) ? "pointer" : "not-allowed"
-            }} 
+            style={{...styles.nextBtn, background: (!hasQueue && isServingSomeone) ? "#f59e0b" : "#10b981", opacity: (hasQueue || isServingSomeone) ? 1 : 0.5}} 
             onClick={callNext}
             disabled={!hasQueue && !isServingSomeone}
           >
@@ -149,7 +139,7 @@ const styles = {
   cardLabel: { fontSize: "11px", letterSpacing: "1px", color: "#94a3b8" },
   tokenDisplay: { fontSize: "5rem", fontWeight: "800", color: "#38bdf8", margin: "10px 0" },
   patientMeta: { fontSize: "1.1rem", marginBottom: "25px" },
-  nextBtn: { color: "#fff", border: "none", padding: "18px", borderRadius: "12px", width: "100%", fontWeight: "bold" },
+  nextBtn: { color: "#fff", border: "none", padding: "18px", borderRadius: "12px", width: "100%", fontWeight: "bold", cursor: "pointer" },
   queueContainer: { background: "#fff", borderRadius: "20px", padding: "25px" },
   queueHeader: { display: "flex", justifyContent: "space-between", marginBottom: "20px" },
   queueCount: { background: "#dcfce7", color: "#166534", padding: "2px 10px", borderRadius: "10px", fontSize: "12px" },

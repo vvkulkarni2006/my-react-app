@@ -1,39 +1,44 @@
-const API = import.meta.env.VITE_API_URL || "http://localhost:5055";
 import React, { useState, useEffect } from "react";
 import Patient from "./Patient";
 import Doctor from "./Doctor";
 import WardDisplay from "./WardDisplay";
-import Receptionist from "./Receptionist"; // Ensure this file exists
+import Receptionist from "./Receptionist";
 
-
+// This points to your live Render backend
+const API = "https://my-react-app-ssib.onrender.com";
 
 export default function App() {
   const [page, setPage] = useState("welcome");
   const [totalServed, setTotalServed] = useState(0);
 
+  // Set page title once on load
   useEffect(() => {
     document.title = "Ayushman Bharat | Smart OPD";
   }, []);
 
+  // Fetch stats (Total Served Today) every 5 seconds
   useEffect(() => {
-    if (page === "bigscreen") {
-      const fetchStats = async () => {
-        try {
-          const res = await fetch(`${API}/stats`);
-          const data = await res.json();
-          setTotalServed(data.totalServed);
-        } catch (e) { console.error(e); }
-      };
-      fetchStats();
-      const i = setInterval(fetchStats, 5000);
-      return () => clearInterval(i);
-    }
-  }, [page]);
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API}/api/stats`);
+        const data = await res.json();
+        setTotalServed(data.totalServed);
+      } catch (e) { 
+        console.error("Backend connection error. It might be sleeping.", e); 
+      }
+    };
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div style={styles.appWrapper}>
       <div style={styles.overlay}></div>
       <div style={styles.contentContainer}>
+        
+        {/* WELCOME HOME PAGE */}
         {page === "welcome" && (
           <div style={styles.heroSection}>
             <div style={styles.glassCard}>
@@ -66,10 +71,12 @@ export default function App() {
           </div>
         )}
 
+        {/* SUB-PAGES */}
         {page === "patient" && <div style={styles.subPageContainer}><Patient logout={() => setPage("welcome")} /></div>}
         {page === "doctor" && <div style={styles.subPageContainer}><Doctor logout={() => setPage("welcome")} /></div>}
         {page === "receptionist" && <div style={styles.subPageContainer}><Receptionist logout={() => setPage("welcome")} /></div>}
 
+        {/* BIG SCREEN DISPLAY */}
         {page === "bigscreen" && (
           <div style={styles.monitorContainer}>
             <div style={styles.statsBar}>
