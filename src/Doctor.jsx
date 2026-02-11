@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
-const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:5055";
+// Pointing directly to your live Render backend
+const API = "https://my-react-app-ssib.onrender.com";
 const ding = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
 
 export default function Doctor({ logout }) {
@@ -26,7 +27,9 @@ export default function Doctor({ logout }) {
       setWard(data.ward);
       setDoctor(data.doctor);
       setLogged(true);
-    } catch (e) { alert("Backend is waking up... please try again in a few seconds."); }
+    } catch (e) { 
+      alert("Server is responding! If login fails, double check your credentials."); 
+    }
   };
 
   const load = async () => {
@@ -42,14 +45,18 @@ export default function Doctor({ logout }) {
         ding.play().catch(() => console.log("Audio waiting for user interaction"));
       }
       setPrevCheckedInCount(currentCheckedIn);
-    } catch (err) { console.error("Fetch error:", err); }
+    } catch (err) { 
+      console.error("Fetch error:", err); 
+    }
   };
 
   const callNext = async () => {
     try {
       await fetch(`${API}/api/call-next/${ward}`, { method: "POST" });
       load(); 
-    } catch (e) { console.error("Connection error"); }
+    } catch (e) { 
+      console.error("Connection error during Call Next"); 
+    }
   };
 
   useEffect(() => {
@@ -94,7 +101,12 @@ export default function Doctor({ logout }) {
           <div style={styles.tokenDisplay}>{nowServing ? nowServing.token : "---"}</div>
           <p style={styles.patientMeta}>{nowServing ? nowServing.name : "Waiting for Patients"}</p>
           <button 
-            style={{...styles.nextBtn, background: (!hasQueue && isServingSomeone) ? "#f59e0b" : "#10b981", opacity: (hasQueue || isServingSomeone) ? 1 : 0.5}} 
+            style={{
+              ...styles.nextBtn, 
+              background: (!hasQueue && isServingSomeone) ? "#f59e0b" : "#10b981", 
+              opacity: (hasQueue || isServingSomeone) ? 1 : 0.5,
+              cursor: (hasQueue || isServingSomeone) ? "pointer" : "not-allowed"
+            }} 
             onClick={callNext}
             disabled={!hasQueue && !isServingSomeone}
           >
@@ -139,7 +151,7 @@ const styles = {
   cardLabel: { fontSize: "11px", letterSpacing: "1px", color: "#94a3b8" },
   tokenDisplay: { fontSize: "5rem", fontWeight: "800", color: "#38bdf8", margin: "10px 0" },
   patientMeta: { fontSize: "1.1rem", marginBottom: "25px" },
-  nextBtn: { color: "#fff", border: "none", padding: "18px", borderRadius: "12px", width: "100%", fontWeight: "bold", cursor: "pointer" },
+  nextBtn: { color: "#fff", border: "none", padding: "18px", borderRadius: "12px", width: "100%", fontWeight: "bold" },
   queueContainer: { background: "#fff", borderRadius: "20px", padding: "25px" },
   queueHeader: { display: "flex", justifyContent: "space-between", marginBottom: "20px" },
   queueCount: { background: "#dcfce7", color: "#166534", padding: "2px 10px", borderRadius: "10px", fontSize: "12px" },
