@@ -1,14 +1,21 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
-app.use(cors());
+
+// 1. Properly configure CORS
+app.use(cors({
+  origin: "https://my-react-app-8f9f.vercel.app", // Your Vercel URL
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
 app.use(express.json());
 
+/* ================= HELPERS ================= */
 const NORMAL_TIME = 10;
 const EMERGENCY_TIME = 20;
 let totalServedToday = 0;
 
-/* ================= HELPERS ================= */
 const timeToMinutes = t => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -81,6 +88,17 @@ function calculateTime(ward) {
 }
 
 /* ================= API ENDPOINTS ================= */
+
+// Root Route for checking server health
+app.get("/", (req, res) => {
+  res.send("Ayushman Bharat Backend is Running...");
+});
+
+// GET stats for the Big Screen
+app.get("/api/stats", (req, res) => {
+  res.json({ totalServed: totalServedToday });
+});
+
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   const ward = Object.keys(doctorAccounts).find(
@@ -133,8 +151,6 @@ app.get("/api/queue/:ward", (req, res) => {
 
 app.post("/api/call-next/:ward", (req, res) => {
   const ward = req.params.ward;
-  
-  // FIXED LOGIC: Find index of first verified patient
   const index = queues[ward].findIndex(p => p.checkedIn === true);
 
   if (index !== -1) {
@@ -145,8 +161,11 @@ app.post("/api/call-next/:ward", (req, res) => {
     calculateTime(ward);
     res.json(served);
   } else {
-    res.status(400).json({ message: "No Arrived Patients to Call" });
+    nowServing[ward] = null;
+    res.json({ message: "Dashboard cleared", nowServing: null });
   }
 });
 
-app.listen(5055, () => console.log("Backend running on http://127.0.0.1:5055"));
+// 2. Use process.env.PORT for Render compatibility
+const PORT = process.env.PORT || 5055;
+app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import jsPDF from "jspdf";
 
-const API = "http://127.0.0.1:5055/api";
+const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:5055";
 
 export default function Patient({ logout }) {
   const [name, setName] = useState("");
@@ -11,81 +11,81 @@ export default function Patient({ logout }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Using a more reliable QR API for PDF generation
   const qrUrl = result ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ABH-${result.token}-${phone}` : "";
 
   const book = async () => {
     if (!name || !phone || !ward) return alert("Please fill all fields");
     setLoading(true);
     try {
-      const res = await fetch(`${API}/book`, {
+      const res = await fetch(`${API}/api/book`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, ward, emergency })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) throw new Error(data.message || "Server Error");
       setResult(data);
-    } catch (err) { alert(err.message); } 
-    finally { setLoading(false); }
+    } catch (err) { 
+      alert("Error: " + err.message); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const downloadPDF = () => {
     const doc = new jsPDF();
     const qrImg = document.getElementById("qrCodeImage");
 
-    // Header Design
     doc.setFillColor(11, 94, 215);
     doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(255);
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.text("AYUSHMAN BHARAT HOSPITAL", 20, 25);
     
-    // Body Text
-    doc.setTextColor(40);
-    doc.setFontSize(14);
-    doc.text(`PATIENT SLIP (Token: ${result.token})`, 20, 55);
-    doc.line(20, 58, 100, 58);
-
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(16);
+    doc.text(`PATIENT SLIP`, 20, 55);
     doc.setFontSize(12);
-    doc.text(`Name: ${name.toUpperCase()}`, 20, 70);
-    doc.text(`Mobile: +91 ${phone}`, 20, 80);
-    doc.text(`Department: ${ward}`, 20, 90);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Estimated Time: ${result.estimatedTime}`, 20, 105);
+    doc.text(`Token Number: ${result.token}`, 20, 63);
+    doc.line(20, 65, 80, 65);
 
-    // QR Code Integration (Wait for image to be rendered in DOM)
+    doc.text(`Patient Name: ${name.toUpperCase()}`, 20, 80);
+    doc.text(`Mobile: +91 ${phone}`, 20, 90);
+    doc.text(`Department: ${ward}`, 20, 100);
+    
+    doc.setFont("helvetica", "bold");
+    doc.text(`Estimated Time: ${result.estimatedTime}`, 20, 115);
+
     if (qrImg) {
-        // We use a canvas-based approach to ensure CORS doesn't block the PDF save
-        const canvas = document.createElement("canvas");
-        canvas.width = qrImg.width;
-        canvas.height = qrImg.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(qrImg, 0, 0);
-        const imgData = canvas.toDataURL("image/png");
-        doc.addImage(imgData, 'PNG', 140, 50, 50, 50);
+      const canvas = document.createElement("canvas");
+      canvas.width = qrImg.width;
+      canvas.height = qrImg.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(qrImg, 0, 0);
+      const imgData = canvas.toDataURL("image/png");
+      doc.addImage(imgData, 'PNG', 140, 50, 50, 50);
     }
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Scan this QR at the Reception for Entry", 140, 105);
-
-    doc.save(`${name}_Token_${result.token}.pdf`);
+    doc.text("Scan QR at Reception for Entry", 140, 105);
+    doc.save(`${name}_Appointment.pdf`);
   };
 
   const sendWhatsApp = () => {
-    const msg = `*AYUSHMAN BHARAT HOSPITAL*%0A----------------------------%0A*Token:* ${result.token}%0A*Patient:* ${name}%0A*Ward:* ${ward}%0A*Time:* ${result.estimatedTime}%0A----------------------------%0A_Please show your QR Code at the entrance._`;
-    window.open(`https://api.whatsapp.com/send?phone=91${phone}&text=${msg}`, "_blank");
+    const message = `*AYUSHMAN BHARAT HOSPITAL*\nToken: ${result.token}\nPatient: ${name}\nSlot: ${result.estimatedTime}\nView QR: ${qrUrl}`;
+    const encodedMsg = encodeURIComponent(message);
+    window.open(`https://wa.me/91${phone}?text=${encodedMsg}`, "_blank");
   };
 
   return (
     <div style={styles.container}>
       {!result ? (
         <div style={styles.card}>
-          <h2 style={{textAlign: 'center', color: '#1e293b'}}>OPD Registration</h2>
+          <h2 style={{textAlign: 'center', color: '#1e293b', marginBottom: '20px'}}>OPD Registration</h2>
           <div style={styles.inputGroup}>
             <input style={styles.input} placeholder="Patient Full Name" onChange={e => setName(e.target.value)} />
-            <input style={styles.input} placeholder="Mobile Number" maxLength={10} onChange={e => setPhone(e.target.value)} />
+            <input style={styles.input} type="tel" placeholder="Mobile Number" maxLength={10} onChange={e => setPhone(e.target.value)} />
             <select style={styles.select} onChange={e => setWard(e.target.value)}>
               <option value="">Select Department</option>
               <option>Gynecologist</option>
@@ -93,12 +93,12 @@ export default function Patient({ logout }) {
               <option>Dermatology</option>
               <option>General</option>
             </select>
-            <label style={{display:'flex', alignItems:'center', gap: '10px', cursor:'pointer'}}>
+            <label style={styles.checkboxLabel}>
                 <input type="checkbox" onChange={e => setEmergency(e.target.checked)} />
-                <span style={{color: emergency ? 'red' : '#64748b', fontWeight: 'bold'}}>Emergency Case</span>
+                <span style={{color: emergency ? '#dc3545' : '#64748b', fontWeight: 'bold'}}>Emergency Case</span>
             </label>
             <button style={styles.bookBtn} onClick={book} disabled={loading}>
-                {loading ? "Processing..." : "Get Digital Token"}
+                {loading ? "Generating Token..." : "Get Digital Token"}
             </button>
           </div>
         </div>
@@ -106,53 +106,45 @@ export default function Patient({ logout }) {
         <div style={styles.card}>
           <div style={styles.successHeader}>
             <div style={styles.tokenCircle}>
-              <small>TOKEN</small>
-              <h1>{result.token}</h1>
+              <small style={{fontSize: '10px', color: '#64748b'}}>TOKEN</small>
+              <h1 style={{margin: 0, color: '#0b5ed7'}}>{result.token}</h1>
             </div>
-            <h3>Booking Confirmed!</h3>
+            <h3 style={{color: '#1e293b'}}>Booking Confirmed!</h3>
           </div>
-
           <div style={styles.qrBox}>
-            <img 
-              id="qrCodeImage"
-              src={qrUrl} 
-              alt="QR Code" 
-              crossOrigin="anonymous" 
-              style={{width: '150px', height: '150px'}}
-            />
+            <img id="qrCodeImage" src={qrUrl} alt="QR" crossOrigin="anonymous" style={{width: '160px', height: '160px', borderRadius: '8px'}} />
           </div>
-
           <div style={styles.infoRow}>
-            <p><b>Position:</b> {result.position}</p>
-            <p><b>Slot:</b> {result.estimatedTime}</p>
+            <div><small>Position</small><p><b>{result.position}</b></p></div>
+            <div><small>Slot</small><p><b>{result.estimatedTime}</b></p></div>
           </div>
-
           <div style={styles.buttonStack}>
-            <button style={styles.pdfBtn} onClick={downloadPDF}>📥 Download Appointment Slip</button>
-            <button style={styles.waBtn} onClick={sendWhatsApp}>💬 Send to WhatsApp</button>
-            <button style={styles.resetBtn} onClick={() => setResult(null)}>Back to New Booking</button>
+            <button style={styles.pdfBtn} onClick={downloadPDF}>📥 Download PDF Slip</button>
+            <button style={styles.waBtn} onClick={sendWhatsApp}>💬 WhatsApp</button>
+            <button style={styles.resetBtn} onClick={() => setResult(null)}>New Registration</button>
           </div>
         </div>
       )}
-      <button style={styles.logoutBtn} onClick={logout}>← Back to Main Menu</button>
+      <button style={styles.logoutBtn} onClick={logout}>← Back</button>
     </div>
   );
 }
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
-  card: { background: '#fff', padding: '30px', borderRadius: '20px', width: '100%', maxWidth: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' },
-  inputGroup: { display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' },
-  input: { padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' },
-  select: { padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' },
-  bookBtn: { background: '#0b5ed7', color: '#fff', border: 'none', padding: '15px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
+  container: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8fafc', padding: '20px' },
+  card: { background: '#ffffff', padding: '30px', borderRadius: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '15px' },
+  input: { padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px' },
+  select: { padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', background: 'white' },
+  checkboxLabel: { display:'flex', alignItems:'center', gap: '10px', cursor:'pointer' },
+  bookBtn: { background: '#0b5ed7', color: '#fff', border: 'none', padding: '16px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' },
   successHeader: { textAlign: 'center', marginBottom: '20px' },
-  tokenCircle: { background: '#f0f7ff', width: '100px', height: '100px', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', border: '2px solid #0b5ed7' },
-  qrBox: { textAlign: 'center', background: '#f8fafc', padding: '20px', borderRadius: '15px', marginBottom: '20px' },
-  infoRow: { display: 'flex', justifyContent: 'space-around', marginBottom: '20px', fontSize: '14px' },
-  buttonStack: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  pdfBtn: { background: '#1e293b', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer' },
-  waBtn: { background: '#25D366', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer' },
-  resetBtn: { background: 'none', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', cursor: 'pointer' },
-  logoutBtn: { marginTop: '20px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }
+  tokenCircle: { background: '#f0f7ff', width: '90px', height: '90px', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', border: '3px solid #0b5ed7' },
+  qrBox: { textAlign: 'center', background: '#f1f5f9', padding: '20px', borderRadius: '20px', marginBottom: '20px' },
+  infoRow: { display: 'flex', justifyContent: 'space-around', marginBottom: '25px', textAlign: 'center' },
+  buttonStack: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  pdfBtn: { background: '#1e293b', color: '#fff', border: 'none', padding: '14px', borderRadius: '10px', cursor: 'pointer' },
+  waBtn: { background: '#25D366', color: '#fff', border: 'none', padding: '14px', borderRadius: '10px', cursor: 'pointer' },
+  resetBtn: { background: 'transparent', border: '1px solid #e2e8f0', padding: '12px', borderRadius: '10px', color: '#64748b', cursor: 'pointer' },
+  logoutBtn: { marginTop: '25px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }
 };

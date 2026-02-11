@@ -1,10 +1,11 @@
+const API = import.meta.env.VITE_API_URL || "http://localhost:5055";
 import React, { useState, useEffect } from "react";
 import Patient from "./Patient";
 import Doctor from "./Doctor";
 import WardDisplay from "./WardDisplay";
 import Receptionist from "./Receptionist"; // Ensure this file exists
 
-const API = "http://127.0.0.1:5055/api";
+
 
 export default function App() {
   const [page, setPage] = useState("welcome");
