@@ -1,107 +1,117 @@
-/* ===== GLOBAL RESET ===== */
+/* ============ RESET ============ */
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
-/* ===== ROOT & BODY ===== */
-html, body, #root {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
-/* REMOVE CENTERING */
 body {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  background-color: #F4F7FB;
-  color: #1f2937;
-
-  /* ❌ REMOVE FLEX CENTERING */
-  display: block;
+  font-family: "Segoe UI", Roboto, sans-serif;
 }
 
-/* ===== LINKS ===== */
-a {
+/* ============ WELCOME PAGE ============ */
+.welcomePage {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0b5ed7, #1e88ff);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.welcomeContent {
+  text-align: center;
+  animation: slideUp 0.8s ease;
+}
+
+.welcomeContent h1 {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.welcomeContent h2 {
+  font-size: 40px;
+  margin-bottom: 15px;
   font-weight: 500;
-  color: #0B5ED7;
-  text-decoration: none;
 }
 
-a:hover {
-  color: #084298;
+.welcomeContent p {
+  font-size: 20px;
+  opacity: 0.9;
 }
 
-/* ===== HEADINGS ===== */
-h1 {
-  font-size: 2.4rem;
-  line-height: 1.2;
+/* ============ MAIN PAGE ============ */
+.pageBg {
+  min-height: 100vh;
+  background: #f5f9ff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-h2 {
-  font-size: 1.8rem;
+.pageContainer {
+  max-width: 1600px;
+  width: 100%;
+  padding: 40px;
 }
 
-h3 {
-  font-size: 1.3rem;
+.card {
+  background: white;
+  padding: 70px;
+  border-radius: 24px;
+  box-shadow: 0 25px 60px rgba(11, 94, 215, 0.15);
+  animation: cardEnter 0.6s ease;
 }
 
-/* ===== BUTTONS ===== */
+/* ============ ANIMATIONS ============ */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============ COMMON UI ============ */
 button {
-  border-radius: 8px;
+  background: linear-gradient(135deg, #0b5ed7, #1e88ff);
+  color: white;
+  padding: 16px 28px;
   border: none;
-  padding: 0.75em 1.4em;
-  font-size: 1rem;
+  border-radius: 14px;
+  font-size: 16px;
   font-weight: 600;
-  font-family: inherit;
-  background-color: #0B5ED7;
-  color: #ffffff;
   cursor: pointer;
-  transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-button:hover {
-  background-color: #084298;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
-}
-
-button:focus {
-  outline: none;
-}
-
-/* ===== INPUTS & SELECT ===== */
-input, select {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  font-size: 1rem;
+input,
+select {
   width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 15px;
 }
-
-input:focus, select:focus {
-  outline: none;
-  border-color: #0B5ED7;
-  box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.15);
-}
-
-/* ===== CHECKBOX (EMERGENCY) ===== */
-input[type="checkbox"] {
-  accent-color: #DC3545;
-}
-
-/* ===== UTILITY ===== */
-.container {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 32px;
-}
-
-/* ===== BIG SCREEN OVERRIDE ===== */
-.big-screen {
-  width: 100vw;
-  height: 100vh;
-  background: #ffffff;
+.pdfBtn {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #0b5ed7, #1e88ff);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
 }
