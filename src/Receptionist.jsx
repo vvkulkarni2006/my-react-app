@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
-const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:5055";
+const API = "https://my-react-app-ssib.onrender.com";
 
 export default function Receptionist() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -21,7 +21,7 @@ export default function Receptionist() {
       if (res.ok) setIsLoggedIn(true);
       else alert(data.message);
     } catch (e) {
-      alert("Backend not connected!");
+      alert("Backend not connected! Wait 60s for server to wake up.");
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
-// Use environment variable for live URL or fallback to localhost
-const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:5055";
+// Pointing to your live Render backend
+const API = "https://my-react-app-ssib.onrender.com";
 
 export default function WardDisplay({ ward }) {
   const [queue, setQueue] = useState([]);
@@ -10,11 +10,9 @@ export default function WardDisplay({ ward }) {
 
   const load = async () => {
     try {
-      // Added /api prefix to match your backend routes
       const res = await fetch(`${API}/api/queue/${ward}`);
       const data = await res.json();
       
-      // Only show checked-in patients in the waiting list
       setQueue(data.queue ? data.queue.filter(p => p.checkedIn) : []);
       setNowServing(data.nowServing || null);
       setDoctor(data.doctor || null);
@@ -25,11 +23,10 @@ export default function WardDisplay({ ward }) {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 3000); // Refresh every 3 seconds
+    const t = setInterval(load, 3000); 
     return () => clearInterval(t);
   }, [ward]);
 
-  // Voice Announcement Logic
   useEffect(() => {
     if (nowServing && nowServing.token) {
       const msg = new SpeechSynthesisUtterance();
@@ -72,33 +69,9 @@ export default function WardDisplay({ ward }) {
 }
 
 const styles = {
-  card: { 
-    background: "#fff", 
-    padding: "20px", 
-    borderRadius: "18px", 
-    boxShadow: "0 10px 20px rgba(0,0,0,0.05)",
-    border: "1px solid #f1f5f9"
-  },
-  header: {
-    marginBottom: "15px",
-    borderBottom: "1px solid #f1f5f9",
-    paddingBottom: "10px"
-  },
-  now: { 
-    background: "#0d6efd", 
-    color: "#fff", 
-    padding: "20px", 
-    borderRadius: "15px", 
-    textAlign: "center",
-    boxShadow: "0 8px 15px rgba(13, 110, 253, 0.2)"
-  },
+  card: { background: "#fff", padding: "20px", borderRadius: "18px", boxShadow: "0 10px 20px rgba(0,0,0,0.05)", border: "1px solid #f1f5f9" },
+  header: { marginBottom: "15px", borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" },
+  now: { background: "#0d6efd", color: "#fff", padding: "20px", borderRadius: "15px", textAlign: "center", boxShadow: "0 8px 15px rgba(13, 110, 253, 0.2)" },
   token: { fontSize: "48px", fontWeight: "900", margin: "5px 0" },
-  row: { 
-    display: "flex", 
-    justifyContent: "space-between", 
-    alignItems: "center",
-    padding: "12px", 
-    borderRadius: "10px", 
-    marginBottom: "8px" 
-  }
+  row: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", borderRadius: "10px", marginBottom: "8px" }
 };

@@ -25,57 +25,34 @@ export default function Patient({ logout }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Server Error");
       setResult(data);
-    } catch (err) { 
-      alert("Error: " + err.message); 
-    } finally { 
-      setLoading(false); 
-    }
+    } catch (err) { alert("Error: " + err.message); }
+    finally { setLoading(false); }
   };
 
   const downloadPDF = () => {
     const doc = new jsPDF();
     const qrImg = document.getElementById("qrCodeImage");
-
     doc.setFillColor(11, 94, 215);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.text("AYUSHMAN BHARAT HOSPITAL", 20, 25);
-    
     doc.setTextColor(40, 40, 40);
     doc.setFontSize(16);
     doc.text(`PATIENT SLIP`, 20, 55);
     doc.setFontSize(12);
     doc.text(`Token Number: ${result.token}`, 20, 63);
-    doc.line(20, 65, 80, 65);
-
     doc.text(`Patient Name: ${name.toUpperCase()}`, 20, 80);
-    doc.text(`Mobile: +91 ${phone}`, 20, 90);
-    doc.text(`Department: ${ward}`, 20, 100);
-    
+    doc.text(`Department: ${ward}`, 20, 90);
     doc.setFont("helvetica", "bold");
-    doc.text(`Estimated Time: ${result.estimatedTime}`, 20, 115);
-
+    doc.text(`Estimated Time: ${result.estimatedTime}`, 20, 105);
     if (qrImg) {
       const canvas = document.createElement("canvas");
-      canvas.width = qrImg.width;
-      canvas.height = qrImg.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(qrImg, 0, 0);
-      const imgData = canvas.toDataURL("image/png");
-      doc.addImage(imgData, 'PNG', 140, 50, 50, 50);
+      canvas.width = qrImg.width; canvas.height = qrImg.height;
+      canvas.getContext("2d").drawImage(qrImg, 0, 0);
+      doc.addImage(canvas.toDataURL("image/png"), 'PNG', 140, 50, 50, 50);
     }
-
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text("Scan QR at Reception for Entry", 140, 105);
-    doc.save(`${name}_Appointment.pdf`);
-  };
-
-  const sendWhatsApp = () => {
-    const message = `*AYUSHMAN BHARAT HOSPITAL*\nToken: ${result.token}\nPatient: ${name}\nSlot: ${result.estimatedTime}\nView QR: ${qrUrl}`;
-    const encodedMsg = encodeURIComponent(message);
-    window.open(`https://wa.me/91${phone}?text=${encodedMsg}`, "_blank");
+    doc.save(`${name}_Token.pdf`);
   };
 
   return (
@@ -88,41 +65,30 @@ export default function Patient({ logout }) {
             <input style={styles.input} type="tel" placeholder="Mobile Number" maxLength={10} onChange={e => setPhone(e.target.value)} />
             <select style={styles.select} onChange={e => setWard(e.target.value)}>
               <option value="">Select Department</option>
-              <option>Gynecologist</option>
-              <option>Orthopedic</option>
-              <option>Dermatology</option>
-              <option>General</option>
+              <option>Gynecologist</option><option>Orthopedic</option>
+              <option>Dermatology</option><option>General</option>
             </select>
             <label style={styles.checkboxLabel}>
                 <input type="checkbox" onChange={e => setEmergency(e.target.checked)} />
                 <span style={{color: emergency ? '#dc3545' : '#64748b', fontWeight: 'bold'}}>Emergency Case</span>
             </label>
-            <button style={styles.bookBtn} onClick={book} disabled={loading}>
-                {loading ? "Generating Token..." : "Get Digital Token"}
-            </button>
+            <button style={styles.bookBtn} onClick={book} disabled={loading}>{loading ? "Generating..." : "Get Digital Token"}</button>
           </div>
         </div>
       ) : (
         <div style={styles.card}>
-          <div style={styles.successHeader}>
-            <div style={styles.tokenCircle}>
-              <small style={{fontSize: '10px', color: '#64748b'}}>TOKEN</small>
-              <h1 style={{margin: 0, color: '#0b5ed7'}}>{result.token}</h1>
-            </div>
-            <h3 style={{color: '#1e293b'}}>Booking Confirmed!</h3>
+          <div style={styles.tokenCircle}>
+            <small>TOKEN</small><h1>{result.token}</h1>
           </div>
           <div style={styles.qrBox}>
-            <img id="qrCodeImage" src={qrUrl} alt="QR" crossOrigin="anonymous" style={{width: '160px', height: '160px', borderRadius: '8px'}} />
+            <img id="qrCodeImage" src={qrUrl} alt="QR" crossOrigin="anonymous" style={{width: '160px'}} />
           </div>
           <div style={styles.infoRow}>
             <div><small>Position</small><p><b>{result.position}</b></p></div>
             <div><small>Slot</small><p><b>{result.estimatedTime}</b></p></div>
           </div>
-          <div style={styles.buttonStack}>
-            <button style={styles.pdfBtn} onClick={downloadPDF}>📥 Download PDF Slip</button>
-            <button style={styles.waBtn} onClick={sendWhatsApp}>💬 WhatsApp</button>
-            <button style={styles.resetBtn} onClick={() => setResult(null)}>New Registration</button>
-          </div>
+          <button style={styles.pdfBtn} onClick={downloadPDF}>📥 Download PDF Slip</button>
+          <button style={styles.resetBtn} onClick={() => setResult(null)}>New Registration</button>
         </div>
       )}
       <button style={styles.logoutBtn} onClick={logout}>← Back</button>
@@ -138,13 +104,10 @@ const styles = {
   select: { padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', background: 'white' },
   checkboxLabel: { display:'flex', alignItems:'center', gap: '10px', cursor:'pointer' },
   bookBtn: { background: '#0b5ed7', color: '#fff', border: 'none', padding: '16px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' },
-  successHeader: { textAlign: 'center', marginBottom: '20px' },
   tokenCircle: { background: '#f0f7ff', width: '90px', height: '90px', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', border: '3px solid #0b5ed7' },
   qrBox: { textAlign: 'center', background: '#f1f5f9', padding: '20px', borderRadius: '20px', marginBottom: '20px' },
   infoRow: { display: 'flex', justifyContent: 'space-around', marginBottom: '25px', textAlign: 'center' },
-  buttonStack: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  pdfBtn: { background: '#1e293b', color: '#fff', border: 'none', padding: '14px', borderRadius: '10px', cursor: 'pointer' },
-  waBtn: { background: '#25D366', color: '#fff', border: 'none', padding: '14px', borderRadius: '10px', cursor: 'pointer' },
-  resetBtn: { background: 'transparent', border: '1px solid #e2e8f0', padding: '12px', borderRadius: '10px', color: '#64748b', cursor: 'pointer' },
+  pdfBtn: { background: '#1e293b', color: '#fff', border: 'none', padding: '14px', borderRadius: '10px', cursor: 'pointer', width: '100%', marginBottom: '10px' },
+  resetBtn: { background: 'transparent', border: '1px solid #e2e8f0', padding: '12px', borderRadius: '10px', color: '#64748b', cursor: 'pointer', width: '100%' },
   logoutBtn: { marginTop: '25px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }
 };
