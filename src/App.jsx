@@ -314,10 +314,7 @@ export default function App() {
                 <div style={styles.hrLine}></div>
                 <p style={styles.ownerTitle}>DESIGNED & DEVELOPED BY</p>
                 <div style={styles.ownerGrid}>
-                   <div style={styles.ownerItem}>🚀 Gururaj Inamdar</div>
-                   <div style={styles.ownerItem}>🛠️ Darshan Kore</div>
-                   <div style={styles.ownerItem}>💻 Abhishek</div>
-                   <div style={styles.ownerItem}>⚙️ Abhishek Reddy</div>
+                   <div style={styles.ownerItem}>🚀  DELTA ROBOS </div>
                 </div>
               </div>
 
