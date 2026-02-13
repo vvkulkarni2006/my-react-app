@@ -2,20 +2,19 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 
-// 1. UPDATED CORS: Point specifically to your live Vercel URL
 app.use(cors({
-  origin: "https://my-react-app-aj2h.vercel.app", 
+  origin: "*",
   methods: ["GET", "POST"],
-  credentials: true
+  allowedHeaders: ["Content-Type"]
 }));
-
 app.use(express.json());
 
-/* ================= HELPERS & DATA ================= */
 const NORMAL_TIME = 10;
 const EMERGENCY_TIME = 20;
+const BREAK_DURATION = 30; 
 let totalServedToday = 0;
 
+/* ================= HELPERS ================= */
 const timeToMinutes = t => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -24,7 +23,9 @@ const timeToMinutes = t => {
 const minutesToTime = m => {
   const normalizedMinutes = m % 1440; 
   return new Date(0, 0, 0, Math.floor(normalizedMinutes / 60), normalizedMinutes % 60).toLocaleTimeString([], {
-    hour: "2-digit", minute: "2-digit", hour12: true
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
   });
 };
 
@@ -35,11 +36,12 @@ function getIndianMinutesNow() {
   return ist.getHours() * 60 + ist.getMinutes();
 }
 
+/* ================= DATA & CONFIG ================= */
 const doctors = {
-  Gynecologist: { name: "Anjali", genStart: "06:00", genEnd: "23:00" },
-  Orthopedic: { name: "Ramesh", genStart: "06:00", genEnd: "23:00" },
-  Dermatology: { name: "Priya", genStart: "06:00", genEnd: "23:00" },
-  General: { name: "Kumar", genStart: "06:00", genEnd: "23:00" }
+  Gynecologist: { name: "Anjali", genStart: "06:00", genEnd: "23:00", onBreak: false, breakEndTime: 0 },
+  Orthopedic: { name: "Ramesh", genStart: "06:00", genEnd: "23:00", onBreak: false, breakEndTime: 0 },
+  Dermatology: { name: "Priya", genStart: "06:00", genEnd: "23:00", onBreak: false, breakEndTime: 0 },
+  General: { name: "Kumar", genStart: "06:00", genEnd: "23:00", onBreak: false, breakEndTime: 0 }
 };
 
 const doctorAccounts = {
@@ -50,83 +52,175 @@ const doctorAccounts = {
 };
 
 const receptionAccount = { username: "admin", password: "99" };
+
 const queues = { Gynecologist: [], Orthopedic: [], Dermatology: [], General: [] };
 const nowServing = { Gynecologist: null, Orthopedic: null, Dermatology: null, General: null };
+
 const wardClock = {};
-Object.keys(doctors).forEach(ward => { wardClock[ward] = getIndianMinutesNow(); });
+Object.keys(doctors).forEach(ward => {
+  wardClock[ward] = getIndianMinutesNow();
+});
 
 function calculateTime(ward) {
   let currentTimeIST = getIndianMinutesNow();
-  if (wardClock[ward] < currentTimeIST) wardClock[ward] = currentTimeIST;
+  const doc = doctors[ward];
+  
+  if (doc.onBreak && doc.breakEndTime > currentTimeIST) {
+    wardClock[ward] = doc.breakEndTime;
+  } else if (wardClock[ward] < currentTimeIST) { 
+    wardClock[ward] = currentTimeIST; 
+  }
+
   let runningTime = wardClock[ward];
+  const genStart = timeToMinutes("06:00");
+  const genEnd = timeToMinutes("23:00");
+  
   queues[ward] = queues[ward].map(p => {
-    const timeStr = minutesToTime(runningTime);
-    runningTime += p.emergency ? EMERGENCY_TIME : NORMAL_TIME;
-    return { ...p, estimatedTime: timeStr };
+    if (p.emergency) {
+      const timeStr = minutesToTime(runningTime);
+      runningTime += EMERGENCY_TIME;
+      return { ...p, estimatedTime: timeStr };
+    } else {
+      if (runningTime < genStart) runningTime = genStart;
+      if (runningTime >= genEnd) return { ...p, estimatedTime: "OPD Closed" };
+      const timeStr = minutesToTime(runningTime);
+      runningTime += NORMAL_TIME;
+      return { ...p, estimatedTime: timeStr };
+    }
   });
 }
 
-/* ================= API ENDPOINTS ================= */
-
-// Health Check
-app.get("/", (req, res) => res.send("Ayushman Bharat Backend is Running..."));
-
-// Stats route for App.jsx
-app.get("/api/stats", (req, res) => res.json({ totalServed: totalServedToday }));
+/* ================= AUTH ENDPOINTS ================= */
 
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
-  const ward = Object.keys(doctorAccounts).find(w => doctorAccounts[w].username === username && doctorAccounts[w].password === password);
-  if (!ward) return res.status(401).json({ message: "Invalid login" });
-  res.json({ ward, doctor: doctors[ward] });
+  const ward = Object.keys(doctorAccounts).find(
+    w => doctorAccounts[w].username === username && doctorAccounts[w].password === password
+  );
+  if (ward) {
+    res.json({ ward, doctor: doctors[ward], message: "Login successful" });
+  } else {
+    res.status(401).json({ message: "Invalid Physician Credentials" });
+  }
 });
 
 app.post("/api/reception-login", (req, res) => {
   const { username, password } = req.body;
-  if (username === receptionAccount.username && password === receptionAccount.password) res.json({ success: true });
-  else res.status(401).json({ message: "Invalid Admin Credentials" });
+  if (username === receptionAccount.username && password === receptionAccount.password) {
+    res.json({ success: true, message: "Reception Access Granted" });
+  } else {
+    res.status(401).json({ message: "Invalid Staff Credentials" });
+  }
+});
+
+/* ================= CORE API ENDPOINTS ================= */
+
+app.get("/api/queues", (req, res) => { res.json(queues); });
+
+app.get("/api/queue/:ward", (req, res) => {
+  const ward = req.params.ward;
+  res.json({
+    queue: queues[ward] || [],
+    nowServing: nowServing[ward],
+    doctor: doctors[ward]
+  });
 });
 
 app.post("/api/book", (req, res) => {
   const { name, phone, ward, emergency } = req.body;
-  const token = ward[0] + (queues[ward].length + 1);
-  const patient = { token, name, phone, emergency: !!emergency, checkedIn: false };
-  emergency ? queues[ward].unshift(patient) : queues[ward].push(patient);
+  
+  const exists = Object.values(queues).flat().find(p => p.phone === phone);
+  if (exists) return res.status(400).json({ message: "This phone number already has an active booking." });
+
+  const prefix = ward.substring(0, 3).toUpperCase(); 
+  const tokenNumber = queues[ward].length + 101;
+  const token = `${prefix}${tokenNumber}`; 
+
+  const patient = { 
+    token, 
+    name, 
+    phone, 
+    ward, 
+    emergency: !!emergency, 
+    checkedIn: false, 
+    vitals: null
+  };
+
+  if (emergency) { queues[ward].unshift(patient); } else { queues[ward].push(patient); }
   calculateTime(ward);
-  const booked = queues[ward].find(p => p.token === token);
-  res.json({ token, estimatedTime: booked.estimatedTime, doctor: doctors[ward].name, position: queues[ward].indexOf(booked) + 1 });
+  
+  const bookedPatient = queues[ward].find(p => p.token === token);
+  res.json({ ...bookedPatient, doctor: doctors[ward].name, position: queues[ward].indexOf(bookedPatient) + 1 });
 });
 
 app.post("/api/checkin", (req, res) => {
-  const { qrData } = req.body;
-  const token = qrData.split("-")[1];
+  const { qrData, vitals } = req.body;
+  let tokenToMatch = qrData.startsWith("ABH-") ? qrData.split("-")[1] : qrData.trim().toUpperCase();
+
   let found = null;
   Object.keys(queues).forEach(w => {
-    const p = queues[w].find(p => p.token === token);
-    if (p) { p.checkedIn = true; found = p; }
+    const p = queues[w].find(p => p.token === tokenToMatch);
+    if (p) { 
+      p.checkedIn = true; 
+      p.vitals = vitals; 
+      found = p; 
+    }
   });
-  if (found) res.json({ message: `Verified: ${found.name}`, patient: found });
-  else res.status(404).json({ message: "Token not found" });
+  
+  if (found) {
+    res.json({ message: `Verified: ${found.name}`, patient: found });
+  } else {
+    res.status(404).json({ message: `Token ${tokenToMatch} not found` });
+  }
 });
 
-app.get("/api/queue/:ward", (req, res) => {
-  res.json({ doctor: doctors[req.params.ward], nowServing: nowServing[req.params.ward], queue: queues[req.params.ward] });
+/* ================= DOCTOR ACTIONS ================= */
+
+app.post("/api/toggle-break/:ward", (req, res) => {
+  const ward = req.params.ward;
+  const doc = doctors[ward];
+  if (!doc) return res.status(404).json({ message: "Ward not found" });
+
+  doc.onBreak = !doc.onBreak;
+  doc.breakEndTime = doc.onBreak ? getIndianMinutesNow() + BREAK_DURATION : 0;
+  
+  calculateTime(ward);
+  res.json({ onBreak: doc.onBreak });
 });
 
 app.post("/api/call-next/:ward", (req, res) => {
   const ward = req.params.ward;
+  if (doctors[ward].onBreak) return res.status(400).json({ message: "End Break to call patients" });
+  
+  // Logic simplified: Only checks if the patient has checkedIn. Payment check removed.
   const index = queues[ward].findIndex(p => p.checkedIn === true);
+  
   if (index !== -1) {
     const served = queues[ward].splice(index, 1)[0]; 
+    wardClock[ward] = getIndianMinutesNow() + (served.emergency ? EMERGENCY_TIME : NORMAL_TIME);
     totalServedToday++; 
     nowServing[ward] = served;
     calculateTime(ward);
     res.json(served);
-  } else {
-    nowServing[ward] = null;
-    res.json({ message: "Queue empty", nowServing: null });
+  } else { 
+    res.status(400).json({ message: "No Arrived Patients in Queue" }); 
   }
 });
 
-const PORT = process.env.PORT || 5055;
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+app.post("/api/finish-consultation/:ward", (req, res) => {
+  const ward = req.params.ward;
+  nowServing[ward] = null;
+  res.json({ message: "Consultation Cleared" });
+});
+
+/* ================= START SERVER ================= */
+
+const PORT = 5055;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`
+  ==========================================
+  HOSPITAL BACKEND LIVE (PAYMENTS REMOVED)
+  URL: http://127.0.0.1:${PORT}
+  ==========================================
+  `);
+});
