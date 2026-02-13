@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-const API = "http://localhost:5055";
+const API = "https://my-react-app-ssib.onrender.com";
 
 export default function WardDisplay({ ward }) {
   const [queue, setQueue] = useState([]);
@@ -10,14 +10,12 @@ export default function WardDisplay({ ward }) {
 
   const load = async () => {
     try {
-      const res = await fetch(`${API}/api/queue/${ward}`);
+      const res = await fetch(`${API}/api/queue/${ward}?t=${Date.now()}`);
       const data = await res.json();
-      
       setQueue(data.queue ? data.queue.filter(p => p.checkedIn) : []);
       setNowServing(data.nowServing || null);
       setDoctor(data.doctor || null);
-      // Update the timestamp every time data is fetched
-      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (e) {
       console.error("WardDisplay Fetch Error:", e);
     }
@@ -32,95 +30,102 @@ export default function WardDisplay({ ward }) {
   useEffect(() => {
     if (nowServing && nowServing.token) {
       const msg = new SpeechSynthesisUtterance();
-      msg.text = `Attention please. Token Number ${nowServing.token}, kindly proceed to the ${ward} ward. Thank you.`;
+      msg.text = `Attention please. Token Number ${nowServing.token}, kindly proceed to the ${ward} ward.`;
       msg.rate = 0.85;
+      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(msg);
     }
   }, [nowServing?.token, ward]);
 
-  // Helper to determine wait intensity
-  const getIntensity = () => {
-    if (queue.length > 10) return { label: "High Volume", color: "#e11d48" };
-    if (queue.length > 5) return { label: "Moderate", color: "#f59e0b" };
-    return { label: "Fast Flow", color: "#10b981" };
-  };
-
-  const intensity = getIntensity();
+  const intensity = queue.length > 10 ? { label: "Busy", color: "#e11d48" } : { label: "Stable", color: "#10b981" };
 
   return (
     <div style={styles.card}>
+      {/* Top Header Section */}
       <div style={styles.header}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h3 style={{ margin: 0, color: '#1e293b', fontSize: '1.2rem' }}>{ward}</h3>
-            <small style={{ color: '#64748b', fontWeight: '500' }}>
-              {doctor ? `Dr. ${doctor.name}` : "Assigning Doctor..."}
-            </small>
+        <div style={styles.headerTop}>
+          <div style={styles.wardInfo}>
+            <span style={styles.deptLabel}>DEPARTMENT</span>
+            <h3 style={styles.wardTitle}>{ward}</h3>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ ...styles.intensityBadge, color: intensity.color, borderColor: intensity.color }}>
-              {intensity.label}
-            </div>
-            <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>Sync: {lastUpdated}</div>
+          <div style={styles.doctorBadge}>
+            <span style={styles.docIcon}>👨‍⚕️</span>
+            <span>{doctor ? `Dr. ${doctor.name}` : "Off Duty"}</span>
           </div>
         </div>
       </div>
 
-      <div style={styles.now}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-          <div style={styles.pulse}></div>
-          <span style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '1px' }}>NOW SERVING</span>
+      {/* Hero "Now Serving" Section */}
+      <div style={styles.nowContainer}>
+        <div style={styles.servingGlow}></div>
+        <div style={styles.pulseContainer}>
+          <div style={styles.pulseRing}></div>
+          <span style={styles.servingLabel}>CURRENTLY SERVING</span>
         </div>
-        <div style={styles.token}>{nowServing ? nowServing.token : "—"}</div>
-        <div style={{ fontSize: '15px', fontWeight: '700', textTransform: 'uppercase' }}>
-          {nowServing ? nowServing.name : "Waiting for Patient"}
+        <div style={styles.tokenNumber}>{nowServing ? nowServing.token : "---"}</div>
+        <div style={styles.patientName}>
+          {nowServing ? nowServing.name : "Ready for next patient"}
         </div>
       </div>
 
-      <div style={{ marginTop: '20px' }}>
-        <div style={styles.upcomingHeader}>
-          <span>UPCOMING QUEUE</span>
-          <span>{queue.length} Total</span>
+      {/* Queue List Section */}
+      <div style={styles.queueWrapper}>
+        <div style={styles.queueHeader}>
+          <span style={styles.qTitle}>UPCOMING PATIENTS</span>
+          <span style={{...styles.intensityBadge, color: intensity.color}}>{intensity.label}</span>
         </div>
         
-        {queue.slice(0, 4).map((p, index) => (
-          <div key={p.token} style={{ 
-            ...styles.row, 
-            background: p.emergency ? "#fff1f2" : "#f8fafc",
-            borderLeft: p.emergency ? "4px solid #e11d48" : "4px solid #e2e8f0"
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <b style={{ color: p.emergency ? "#e11d48" : "#0d6efd", fontSize: '16px' }}>{p.token}</b>
-              <span style={{ fontSize: '14px', color: '#334155', fontWeight: '500' }}>{p.name}</span>
+        <div style={styles.scrollArea}>
+          {queue.slice(0, 5).map((p, index) => (
+            <div key={p.token} style={{...styles.row, borderLeftColor: p.emergency ? "#e11d48" : "#3b82f6"}}>
+              <div style={styles.rowLeft}>
+                <span style={styles.rowToken}>{p.token}</span>
+                <span style={styles.rowName}>{p.name}</span>
+              </div>
+              {p.emergency ? <span style={styles.emergTag}>SOS</span> : <span style={styles.timeTag}>{index * 5 + 5}m</span>}
             </div>
-            {p.emergency ? (
-              <span style={styles.emergencyTag}>PRIORITY</span>
-            ) : (
-              <small style={{ color: '#64748b', fontSize: '11px' }}>Est. {index * 5 + 5}m</small>
-            )}
-          </div>
-        ))}
-        
-        {queue.length === 0 && !nowServing && (
-          <div style={styles.emptyState}>
-            <span style={{ fontSize: '24px' }}>☕</span>
-            <p style={{ margin: '5px 0 0 0' }}>Ward currently clear</p>
-          </div>
-        )}
+          ))}
+          {queue.length === 0 && <div style={styles.empty}>Ward is currently quiet</div>}
+        </div>
       </div>
+
+      {/* Footer Footer Sync Bar */}
+      <div style={styles.footer}>
+        <span>System Active</span>
+        <span>Last Sync: {lastUpdated}</span>
+      </div>
+
+      <style>{`
+        @keyframes rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { opacity: 0.5; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+      `}</style>
     </div>
   );
 }
 
 const styles = {
-  card: { background: "#fff", padding: "20px", borderRadius: "20px", boxShadow: "0 10px 25px rgba(0,0,0,0.08)", border: "1px solid #f1f5f9", height: '100%' },
-  header: { marginBottom: "15px", borderBottom: "1px solid #f1f5f9", paddingBottom: "12px" },
-  intensityBadge: { fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', border: '1px solid', textTransform: 'uppercase' },
-  now: { background: "#0f172a", color: "#fff", padding: "24px 20px", borderRadius: "16px", textAlign: "center", position: 'relative', overflow: 'hidden' },
-  pulse: { width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 8px #10b981' },
-  token: { fontSize: "56px", fontWeight: "900", margin: "2px 0", lineHeight: 1 },
-  upcomingHeader: { display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: '#94a3b8', marginBottom: '12px', letterSpacing: '0.5px' },
-  row: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: "8px", marginBottom: "8px", transition: '0.2s' },
-  emergencyTag: { background: "#e11d48", color: "#fff", fontSize: "9px", fontWeight: "900", padding: "2px 6px", borderRadius: "4px" },
-  emptyState: { textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '20px' }
+  card: { background: "#ffffff", padding: "24px", borderRadius: "32px", boxShadow: "0 20px 40px rgba(0,0,0,0.05)", border: "1px solid #f1f5f9", height: '100%', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' },
+  headerTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  deptLabel: { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '1.5px' },
+  wardTitle: { margin: 0, color: '#0f172a', fontSize: '1.5rem', fontWeight: '900' },
+  doctorBadge: { background: '#f1f5f9', padding: '6px 14px', borderRadius: '100px', fontSize: '12px', fontWeight: '700', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' },
+  
+  nowContainer: { background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", padding: "40px 20px", borderRadius: "24px", textAlign: "center", position: 'relative', overflow: 'hidden', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.2)' },
+  servingLabel: { color: '#38bdf8', fontSize: '12px', fontWeight: '900', letterSpacing: '2px' },
+  tokenNumber: { fontSize: "80px", fontWeight: "950", color: "#fff", margin: "10px 0", textShadow: '0 0 20px rgba(56, 189, 248, 0.3)' },
+  patientName: { color: '#94a3b8', fontSize: '16px', fontWeight: '600', textTransform: 'uppercase' },
+  
+  queueWrapper: { flex: 1 },
+  queueHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '15px' },
+  qTitle: { fontSize: '11px', fontWeight: '900', color: '#64748b' },
+  intensityBadge: { fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' },
+  
+  row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: '#f8fafc', borderRadius: '16px', marginBottom: '10px', borderLeft: '5px solid' },
+  rowToken: { fontWeight: '900', color: '#1e293b', fontSize: '18px', marginRight: '15px' },
+  rowName: { fontWeight: '600', color: '#475569' },
+  emergTag: { background: '#fee2e2', color: '#ef4444', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' },
+  timeTag: { fontSize: '11px', color: '#94a3b8', fontWeight: '700' },
+  
+  footer: { display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#cbd5e1', textTransform: 'uppercase', borderTop: '1px solid #f1f5f9', paddingTop: '15px' },
+  empty: { textAlign: 'center', color: '#94a3b8', padding: '40px', fontSize: '14px' }
 };

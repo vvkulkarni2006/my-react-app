@@ -130,7 +130,7 @@ app.post("/api/book", (req, res) => {
   const { name, phone, ward, emergency } = req.body;
   
   const exists = Object.values(queues).flat().find(p => p.phone === phone);
-  if (exists) return res.status(400).json({ message: "This phone number already has an active booking." });
+  if (exists) return res.status(400).json({ message: "This phone number is aleardy booked ." });
 
   const prefix = ward.substring(0, 3).toUpperCase(); 
   const tokenNumber = queues[ward].length + 101;
