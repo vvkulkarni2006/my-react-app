@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import jsPDF from "jspdf";
 
-const API = "http://localhost:5055";
+const API = "https://my-react-app-ssib.onrender.com";
 
 export default function Patient({ logout }) {
   const [view, setView] = useState("register");

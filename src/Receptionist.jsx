@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
-const API = "http://localhost:5055";
+const API = "https://my-react-app-ssib.onrender.com";
 const successSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
 const errorSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3");
 

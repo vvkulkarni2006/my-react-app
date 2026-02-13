@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-
-const API = "http://127.0.0.1:5055";
+const API = "https://my-react-app-ssib.onrender.com";
 const ding = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
 
 export default function Doctor({ logout }) {

@@ -4,7 +4,7 @@ import Doctor from "./Doctor";
 import WardDisplay from "./WardDisplay";
 import Receptionist from "./Receptionist";
 
-const API = "http://localhost:5055";
+const API = "https://my-react-app-ssib.onrender.com";
 
 // Static Data for the New Sections
 const healthArticles = [
